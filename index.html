@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>.bi — A small web programming language</title>
+  <meta name="description" content="A small web programming language with a built-in HTTP server and a pip-style package manager. Written in C++17." />
+  <meta name="author" content="Barshan Sarkar" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink:    { 950:'#07090d', 900:'#0b0e14', 800:'#11151d', 700:'#181d28', 600:'#232a38' },
+            accent: { 300:'#7dd3fc', 400:'#38bdf8', 500:'#0ea5e9', 600:'#0284c7' },
+            lime2:  { 400:'#a3e635' }
+          },
+          fontFamily: {
+            mono: ['ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','monospace'],
+            sans: ['Inter','ui-sans-serif','system-ui','-apple-system','Segoe UI','Roboto','sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    html { -webkit-font-smoothing: antialiased; }
+    ::selection { background: #0ea5e9; color: #fff; }
+
+    /* thin scrollbar */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0b0e14; }
+    ::-webkit-scrollbar-thumb { background: #232a38; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2f3849; }
+
+    /* grid backdrop */
+    .grid-bg {
+      background-image:
+        linear-gradient(to right, rgba(148,163,184,.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148,163,184,.07) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+    .glow {
+      background: radial-gradient(600px circle at 50% 0%, rgba(14,165,233,.18), transparent 60%);
+    }
+    /* copy button feedback */
+    .copied { color: #a3e635 !important; }
+  </style>
+</head>
+
+<body class="bg-ink-950 text-slate-300 font-sans antialiased">
+
+  <!-- ================= NAV ================= -->
+  <header class="fixed top-0 inset-x-0 z-50 backdrop-blur bg-ink-950/70 border-b border-ink-700">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2 group">
+        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center font-mono font-bold text-ink-950 text-sm shadow-lg shadow-accent-600/20">.bi</span>
+        <span class="font-semibold text-slate-100 tracking-tight group-hover:text-white">bi</span>
+        <span class="hidden sm:inline text-[11px] font-mono text-slate-500 border border-ink-600 rounded px-1.5 py-0.5">v0.4.0</span>
+      </a>
+
+      <div class="hidden md:flex items-center gap-7 text-sm">
+        <a href="#install"   class="hover:text-white transition">Install</a>
+        <a href="#quickstart"class="hover:text-white transition">Quick&nbsp;start</a>
+        <a href="#language"  class="hover:text-white transition">Language</a>
+        <a href="#web"       class="hover:text-white transition">Web</a>
+        <a href="#packages"  class="hover:text-white transition">Packages</a>
+        <a href="#cli"       class="hover:text-white transition">CLI</a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/barshansarkar/bi" target="_blank" rel="noopener"
+           class="hidden sm:inline-flex items-center gap-2 text-sm px-3.5 py-1.5 rounded-lg border border-ink-600 hover:border-accent-500 hover:text-white transition">
+          <svg viewBox="0 0 16 16" class="w-4 h-4 fill-current"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+        <a href="#install" class="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-accent-500 hover:bg-accent-400 text-ink-950 text-sm font-semibold transition shadow-lg shadow-accent-600/20">
+          Get started
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ================= HERO ================= -->
+  <section id="top" class="relative pt-32 pb-20 sm:pt-40 sm:pb-28 overflow-hidden">
+    <div class="absolute inset-0 grid-bg [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_60%,transparent_100%)]"></div>
+    <div class="absolute inset-x-0 top-0 h-[420px] glow pointer-events-none"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <div class="inline-flex items-center gap-2 text-xs font-mono px-3 py-1 rounded-full border border-ink-600 bg-ink-900/60 text-slate-400 mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-lime2-400 animate-pulse"></span>
+          C++17 · no dependencies · ~1,500 lines
+        </div>
+
+        <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.05]">
+          A small web language<br class="hidden sm:block" />
+          with a <span class="text-accent-400">built-in HTTP server</span>.
+        </h1>
+
+        <p class="mt-6 text-lg text-slate-400 leading-relaxed max-w-2xl">
+          <span class="font-mono text-slate-300">.bi</span> is a compact programming language for writing web servers.
+          It ships with routes, JSON, a tree-walking interpreter, and a pip-style package manager — in about
+          1,500 lines of C++17. No frameworks. No build step. No ceremony.
+        </p>
+
+        <div class="mt-9 flex flex-col sm:flex-row gap-3">
+          <a href="#quickstart" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent-500 hover:bg-accent-400 text-ink-950 font-semibold transition shadow-lg shadow-accent-600/25">
+            Quick start
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5-5 5M6 12h12"/></svg>
+          </a>
+          <a href="#language" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-ink-600 hover:border-slate-500 hover:bg-ink-800 text-slate-200 font-semibold transition">
+            Read the docs
+          </a>
+        </div>
+
+        <dl class="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl">
+          <div>
+            <dt class="text-xs uppercase tracking-wider text-slate-500">Language</dt>
+            <dd class="mt-1 font-mono text-lg text-white">C++17</dd>
+          </div>
+          <div>
+            <dt class="text-xs uppercase tracking-wider text-slate-500">Dependencies</dt>
+            <dd class="mt-1 font-mono text-lg text-white">none</dd>
+          </div>
+          <div>
+            <dt class="text-xs uppercase tracking-wider text-slate-500">Binary</dt>
+            <dd class="mt-1 font-mono text-lg text-white">~1 MB</dd>
+          </div>
+          <div>
+            <dt class="text-xs uppercase tracking-wider text-slate-500">License</dt>
+            <dd class="mt-1 font-mono text-lg text-white">MIT</dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Hero code card -->
+      <div class="mt-16 lg:mt-0 lg:absolute lg:right-8 lg:top-32 xl:right-16 lg:w-[46%]">
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/80 backdrop-blur shadow-2xl shadow-black/50 overflow-hidden">
+          <div class="flex items-center gap-2 px-4 py-3 border-b border-ink-700 bg-ink-800/60">
+            <span class="w-3 h-3 rounded-full bg-red-500/70"></span>
+            <span class="w-3 h-3 rounded-full bg-yellow-500/70"></span>
+            <span class="w-3 h-3 rounded-full bg-green-500/70"></span>
+            <span class="ml-3 text-xs font-mono text-slate-500">hello.bi</span>
+            <button data-copy class="ml-auto text-xs text-slate-500 hover:text-slate-200 transition font-mono">copy</button>
+          </div>
+          <pre class="p-5 text-[13px] leading-relaxed font-mono overflow-x-auto"><code><span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/"</span> {
+  <span class="text-fuchsia-400">return</span> <span class="text-lime2-400">"&lt;h1&gt;Hello, .bi!&lt;/h1&gt;"</span>
+}
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/api/time"</span> {
+  <span class="text-fuchsia-400">return</span> <span class="text-sky-300">json</span>({ now: <span class="text-sky-300">time</span>() })
+}
+
+<span class="text-sky-300">serve</span>(<span class="text-orange-300">8080</span>)</code></pre>
+        </div>
+        <p class="mt-3 text-xs text-slate-500 text-center font-mono">Run it. You have a web server.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INSTALL ================= -->
+  <section id="install" class="py-20 border-t border-ink-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">01 — install</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Up and running in seconds</h2>
+        <p class="mt-4 text-slate-400">One line on Linux x86_64. Or build from source on any Linux or macOS machine.</p>
+      </div>
+
+      <div class="mt-10 grid lg:grid-cols-2 gap-6">
+        <!-- One-liner -->
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <span class="text-sm font-semibold text-white">One-line install</span>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-accent-500/10 text-accent-300 border border-accent-500/20">linux · x86_64</span>
+          </div>
+          <div class="p-5">
+            <div class="relative group">
+              <pre class="text-[13px] font-mono text-slate-200 bg-ink-950 border border-ink-700 rounded-lg p-4 overflow-x-auto"><code>curl -fsSL https://github.com/barshansarkar/bi/raw/main/install.sh | bash</code></pre>
+              <button data-copy class="absolute top-3 right-3 text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+            </div>
+            <p class="mt-3 text-xs text-slate-500">No dependencies. Detects your platform and drops the binary in <code class="font-mono text-slate-400">/usr/local/bin</code>.</p>
+          </div>
+        </div>
+
+        <!-- From source -->
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <span class="text-sm font-semibold text-white">From source</span>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-ink-700 text-slate-400 border border-ink-600">any linux · macos</span>
+          </div>
+          <div class="p-5">
+            <div class="relative group">
+              <pre class="text-[13px] font-mono text-slate-200 bg-ink-950 border border-ink-700 rounded-lg p-4 overflow-x-auto"><code>git clone https://github.com/barshansarkar/bi
+cd bi
+make
+sudo make install</code></pre>
+              <button data-copy class="absolute top-3 right-3 text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+            </div>
+            <p class="mt-3 text-xs text-slate-500">Or use CMake: <code class="font-mono text-slate-400">cmake -B build &amp;&amp; cmake --build build -j</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verify -->
+      <div class="mt-6 rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+        <div class="px-5 py-3 border-b border-ink-700">
+          <span class="text-sm font-semibold text-white">Verify the installation</span>
+        </div>
+        <div class="p-5">
+          <div class="relative">
+            <pre class="text-[13px] font-mono bg-ink-950 border border-ink-700 rounded-lg p-4 overflow-x-auto"><code><span class="text-slate-500">$</span> bi version
+<span class="text-lime2-400">bi 0.1.0</span></code></pre>
+            <button data-copy class="absolute top-3 right-3 text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= QUICK START ================= -->
+  <section id="quickstart" class="py-20 border-t border-ink-800 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">02 — quick start</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Your first .bi app</h2>
+        <p class="mt-4 text-slate-400">Scaffold a project, start the server, open a browser. That's the whole loop.</p>
+      </div>
+
+      <div class="mt-10 grid lg:grid-cols-3 gap-6">
+        <div class="rounded-2xl border border-ink-700 bg-ink-950 p-6">
+          <span class="inline-flex w-8 h-8 items-center justify-center rounded-lg bg-accent-500/10 text-accent-300 font-mono text-sm border border-accent-500/20">1</span>
+          <h3 class="mt-4 font-semibold text-white">Scaffold</h3>
+          <pre class="mt-3 text-[13px] font-mono text-slate-300 bg-ink-900 border border-ink-700 rounded-lg p-3 overflow-x-auto"><code>bi new myapp</code></pre>
+        </div>
+        <div class="rounded-2xl border border-ink-700 bg-ink-950 p-6">
+          <span class="inline-flex w-8 h-8 items-center justify-center rounded-lg bg-accent-500/10 text-accent-300 font-mono text-sm border border-accent-500/20">2</span>
+          <h3 class="mt-4 font-semibold text-white">Enter &amp; serve</h3>
+          <pre class="mt-3 text-[13px] font-mono text-slate-300 bg-ink-900 border border-ink-700 rounded-lg p-3 overflow-x-auto"><code>cd myapp
+bi serve src/main.bi</code></pre>
+        </div>
+        <div class="rounded-2xl border border-ink-700 bg-ink-950 p-6">
+          <span class="inline-flex w-8 h-8 items-center justify-center rounded-lg bg-accent-500/10 text-accent-300 font-mono text-sm border border-accent-500/20">3</span>
+          <h3 class="mt-4 font-semibold text-white">Open it</h3>
+          <pre class="mt-3 text-[13px] font-mono text-slate-300 bg-ink-900 border border-ink-700 rounded-lg p-3 overflow-x-auto"><code>http://localhost:8080</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LANGUAGE ================= -->
+  <section id="language" class="py-20 border-t border-ink-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">03 — the language</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Small, but complete</h2>
+        <p class="mt-4 text-slate-400">Variables, closures, arrays, maps, string methods, control flow. Everything you'd expect, nothing you wouldn't.</p>
+      </div>
+
+      <!-- Variables & Types -->
+      <div class="mt-12 grid lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="font-semibold text-white text-sm">Variables &amp; types</h3>
+            <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-fuchsia-400">let</span> name  = <span class="text-lime2-400">"ada"</span>
+<span class="text-fuchsia-400">var</span> count = <span class="text-orange-300">0</span>
+count = count + <span class="text-orange-300">1</span>
+
+<span class="text-slate-500">// Numbers, strings, booleans, null</span>
+<span class="text-orange-300">42</span>  <span class="text-orange-300">3.14</span>  <span class="text-orange-300">-1</span>
+<span class="text-lime2-400">"hello"</span>  <span class="text-lime2-400">'world'</span>
+<span class="text-accent-300">true</span>  <span class="text-accent-300">false</span>  <span class="text-accent-300">null</span>
+
+<span class="text-slate-500">// Arrays and maps</span>
+<span class="text-fuchsia-400">let</span> nums = [<span class="text-orange-300">1</span>, <span class="text-orange-300">2</span>, <span class="text-orange-300">3</span>]
+<span class="text-fuchsia-400">let</span> user = { name: <span class="text-lime2-400">"ada"</span>, age: <span class="text-orange-300">36</span> }</code></pre>
+        </div>
+
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="font-semibold text-white text-sm">Operators</h3>
+            <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code>a + b    a - b    a * b    a / b    a % b
+
+a == b   a != b   a &lt; b    a &lt;= b
+a &gt; b    a &gt;= b
+
+a &amp;&amp; b   a || b   !a
+
+a += 1   a -= 1   a *= 2   a /= 2</code></pre>
+        </div>
+      </div>
+
+      <!-- Control flow & Functions -->
+      <div class="mt-6 grid lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="font-semibold text-white text-sm">Control flow</h3>
+            <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-fuchsia-400">if</span> (x &gt; <span class="text-orange-300">10</span>) {
+  <span class="text-sky-300">print</span>(<span class="text-lime2-400">"big"</span>)
+} <span class="text-fuchsia-400">else</span> {
+  <span class="text-sky-300">print</span>(<span class="text-lime2-400">"small"</span>)
+}
+
+<span class="text-fuchsia-400">while</span> (count &lt; <span class="text-orange-300">10</span>) {
+  count += <span class="text-orange-300">1</span>
+}
+
+<span class="text-fuchsia-400">for</span> (<span class="text-fuchsia-400">let</span> i = <span class="text-orange-300">0</span>; i &lt; <span class="text-orange-300">10</span>; i += <span class="text-orange-300">1</span>) {
+  <span class="text-sky-300">print</span>(i)
+}
+
+<span class="text-fuchsia-400">for</span> (<span class="text-fuchsia-400">let</span> item <span class="text-fuchsia-400">in</span> [<span class="text-orange-300">1</span>, <span class="text-orange-300">2</span>, <span class="text-orange-300">3</span>]) {
+  <span class="text-sky-300">print</span>(item)
+}</code></pre>
+        </div>
+
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="font-semibold text-white text-sm">Functions &amp; closures</h3>
+            <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-fuchsia-400">fn</span> add(a, b) {
+  <span class="text-fuchsia-400">return</span> a + b
+}
+
+<span class="text-fuchsia-400">let</span> double = <span class="text-fuchsia-400">fn</span>(x) { <span class="text-fuchsia-400">return</span> x * <span class="text-orange-300">2</span> }
+
+<span class="text-fuchsia-400">fn</span> counter() {
+  <span class="text-fuchsia-400">let</span> n = <span class="text-orange-300">0</span>
+  <span class="text-fuchsia-400">return</span> <span class="text-fuchsia-400">fn</span>() { n = n + <span class="text-orange-300">1</span>; <span class="text-fuchsia-400">return</span> n }
+}
+
+<span class="text-fuchsia-400">let</span> c = counter()
+c()    <span class="text-slate-500">// 1</span>
+c()    <span class="text-slate-500">// 2</span></code></pre>
+        </div>
+      </div>
+
+      <!-- Collections & Strings -->
+      <div class="mt-6 grid lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="font-semibold text-white text-sm">Collections</h3>
+            <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-fuchsia-400">let</span> nums = [<span class="text-orange-300">1</span>, <span class="text-orange-300">2</span>, <span class="text-orange-300">3</span>]
+
+nums.<span class="text-sky-300">push</span>(<span class="text-orange-300">4</span>)
+nums.length
+nums.<span class="text-sky-300">map</span>(<span class="text-fuchsia-400">fn</span>(x) { <span class="text-fuchsia-400">return</span> x * <span class="text-orange-300">2</span> })
+nums.<span class="text-sky-300">filter</span>(<span class="text-fuchsia-400">fn</span>(x) { <span class="text-fuchsia-400">return</span> x &gt; <span class="text-orange-300">2</span> })
+nums.<span class="text-sky-300">reduce</span>(<span class="text-fuchsia-400">fn</span>(acc, x) { <span class="text-fuchsia-400">return</span> acc + x }, <span class="text-orange-300">0</span>)
+
+<span class="text-fuchsia-400">let</span> user = { name: <span class="text-lime2-400">"ada"</span>, age: <span class="text-orange-300">36</span> }
+user.name
+user[<span class="text-lime2-400">"age"</span>]
+user.email = <span class="text-lime2-400">"a@b.c"</span></code></pre>
+        </div>
+
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="font-semibold text-white text-sm">String methods</h3>
+            <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-lime2-400">"hello"</span>.<span class="text-sky-300">upper</span>()
+<span class="text-lime2-400">"hello"</span>.length
+<span class="text-lime2-400">"a,b,c"</span>.<span class="text-sky-300">split</span>(<span class="text-lime2-400">","</span>)
+<span class="text-lime2-400">"hello"</span>.<span class="text-sky-300">contains</span>(<span class="text-lime2-400">"ell"</span>)
+<span class="text-lime2-400">"  hi  "</span>.<span class="text-sky-300">trim</span>()
+<span class="text-lime2-400">"hello"</span>.<span class="text-sky-300">replace</span>(<span class="text-lime2-400">"l"</span>, <span class="text-lime2-400">"L"</span>)
+<span class="text-lime2-400">"hello"</span>.<span class="text-sky-300">substr</span>(<span class="text-orange-300">1</span>, <span class="text-orange-300">3</span>)</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= WEB ================= -->
+  <section id="web" class="py-20 border-t border-ink-800 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">04 — web</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">A server in every file</h2>
+        <p class="mt-4 text-slate-400">Define routes, read request data, send responses. The HTTP server is part of the runtime — you never wire it up yourself.</p>
+      </div>
+
+      <!-- Routes -->
+      <div class="mt-10 grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-3 rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="font-semibold text-white text-sm">Routes</h3>
+            <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/"</span> {
+  <span class="text-fuchsia-400">return</span> <span class="text-lime2-400">"&lt;h1&gt;home&lt;/h1&gt;"</span>
+}
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/users/:id"</span> {
+  <span class="text-fuchsia-400">return</span> <span class="text-lime2-400">"user "</span> + params.id
+}
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">POST</span> <span class="text-lime2-400">"/api/echo"</span> {
+  <span class="text-fuchsia-400">return</span> <span class="text-sky-300">json</span>({ received: body })
+}
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/old"</span> {
+  <span class="text-sky-300">redirect</span>(<span class="text-lime2-400">"/"</span>)
+}</code></pre>
+          <div class="px-5 pb-5">
+            <p class="text-xs text-slate-500">
+              Methods: <code class="font-mono text-slate-400">GET POST PUT DELETE PATCH</code> ·
+              Segments starting with <code class="font-mono text-accent-300">:</code> are captured into <code class="font-mono text-slate-400">params</code>.
+            </p>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700">
+            <h3 class="font-semibold text-white text-sm">Request variables</h3>
+          </div>
+          <div class="p-5 space-y-3 text-[13px]">
+            <div class="flex gap-3"><code class="font-mono text-accent-300 w-16 shrink-0">req</code><span class="text-slate-400">map — <code class="font-mono text-slate-500">{ method, path, body, headers, query }</code></span></div>
+            <div class="flex gap-3"><code class="font-mono text-accent-300 w-16 shrink-0">params</code><span class="text-slate-400">map — <code class="font-mono text-slate-500">/users/:id</code> → <code class="font-mono text-slate-500">{ id: "42" }</code></span></div>
+            <div class="flex gap-3"><code class="font-mono text-accent-300 w-16 shrink-0">query</code><span class="text-slate-400">map — <code class="font-mono text-slate-500">?name=ada</code> → <code class="font-mono text-slate-500">{ name: "ada" }</code></span></div>
+            <div class="flex gap-3"><code class="font-mono text-accent-300 w-16 shrink-0">body</code><span class="text-slate-400">string — raw request body</span></div>
+            <div class="flex gap-3"><code class="font-mono text-accent-300 w-16 shrink-0">method</code><span class="text-slate-400">string — <code class="font-mono text-slate-500">"GET"</code>, <code class="font-mono text-slate-500">"POST"</code>, …</span></div>
+            <div class="flex gap-3"><code class="font-mono text-accent-300 w-16 shrink-0">path</code><span class="text-slate-400">string — path without query string</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Response helpers -->
+      <div class="mt-6 rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+        <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+          <h3 class="font-semibold text-white text-sm">Response helpers</h3>
+          <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+        </div>
+        <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-fuchsia-400">return</span> <span class="text-lime2-400">"raw text"</span>              <span class="text-slate-500">// text/html</span>
+<span class="text-fuchsia-400">return</span> <span class="text-sky-300">json</span>({ ok: <span class="text-accent-300">true</span> })      <span class="text-slate-500">// application/json</span>
+<span class="text-fuchsia-400">return</span> <span class="text-sky-300">html</span>(<span class="text-lime2-400">"&lt;h1&gt;hi&lt;/h1&gt;"</span>)     <span class="text-slate-500">// explicit html</span>
+
+<span class="text-sky-300">status</span>(<span class="text-orange-300">404</span>)
+<span class="text-sky-300">header</span>(<span class="text-lime2-400">"X-Custom"</span>, <span class="text-lime2-400">"value"</span>)
+<span class="text-sky-300">redirect</span>(<span class="text-lime2-400">"/login"</span>)</code></pre>
+      </div>
+
+      <!-- Full example -->
+      <div class="mt-6 rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+        <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+          <h3 class="font-semibold text-white text-sm">Complete example — a todo API</h3>
+          <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+        </div>
+        <div class="grid lg:grid-cols-2">
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto border-b lg:border-b-0 lg:border-r border-ink-700"><code><span class="text-fuchsia-400">let</span> todos = []
+<span class="text-fuchsia-400">let</span> nextId = <span class="text-orange-300">1</span>
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/"</span> {
+  <span class="text-fuchsia-400">return</span> <span class="text-lime2-400">"&lt;h1&gt;Todos&lt;/h1&gt;&lt;p&gt;See &lt;a href='/api/todos'&gt;/api/todos&lt;/a&gt;&lt;/p&gt;"</span>
+}
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/api/todos"</span> {
+  <span class="text-fuchsia-400">return</span> <span class="text-sky-300">json</span>(todos)
+}
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">POST</span> <span class="text-lime2-400">"/api/todos"</span> {
+  <span class="text-fuchsia-400">let</span> text = query.text
+  <span class="text-fuchsia-400">if</span> (text == <span class="text-accent-300">null</span>) { text = <span class="text-lime2-400">"untitled"</span> }
+  <span class="text-fuchsia-400">let</span> t = { id: nextId, text: text, done: <span class="text-accent-300">false</span> }
+  nextId = nextId + <span class="text-orange-300">1</span>
+  todos.<span class="text-sky-300">push</span>(t)
+  <span class="text-sky-300">status</span>(<span class="text-orange-300">201</span>)
+  <span class="text-fuchsia-400">return</span> <span class="text-sky-300">json</span>(t)
+}
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/api/todos/:id"</span> {
+  <span class="text-fuchsia-400">let</span> id = <span class="text-sky-300">num</span>(params.id)
+  <span class="text-fuchsia-400">for</span> (<span class="text-fuchsia-400">let</span> t <span class="text-fuchsia-400">in</span> todos) {
+    <span class="text-fuchsia-400">if</span> (t.id == id) { <span class="text-fuchsia-400">return</span> <span class="text-sky-300">json</span>(t) }
+  }
+  <span class="text-sky-300">status</span>(<span class="text-orange-300">404</span>)
+  <span class="text-fuchsia-400">return</span> <span class="text-sky-300">json</span>({ error: <span class="text-lime2-400">"not found"</span> })
+}
+
+<span class="text-sky-300">serve</span>(<span class="text-orange-300">8080</span>)</code></pre>
+          <div class="p-5">
+            <p class="text-xs uppercase tracking-wider text-slate-500 mb-3">Test it</p>
+            <pre class="text-[13px] font-mono text-slate-300 bg-ink-900 border border-ink-700 rounded-lg p-4 overflow-x-auto"><code><span class="text-slate-500">$</span> curl -X POST \
+  <span class="text-lime2-400">'http://localhost:8080/api/todos?text=buy+milk'</span>
+
+<span class="text-slate-500">$</span> curl http://localhost:8080/api/todos
+
+<span class="text-slate-500">$</span> curl http://localhost:8080/api/todos/1</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MODULES ================= -->
+  <section id="modules" class="py-20 border-t border-ink-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">05 — modules</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Split your code, keep it simple</h2>
+      </div>
+
+      <div class="mt-10 grid lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700">
+            <span class="font-mono text-xs text-slate-500">utils.bi</span>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-fuchsia-400">export</span> <span class="text-fuchsia-400">fn</span> greet(name) {
+  <span class="text-fuchsia-400">return</span> <span class="text-lime2-400">"Hello, "</span> + name + <span class="text-lime2-400">"!"</span>
+}
+
+<span class="text-fuchsia-400">export</span> <span class="text-fuchsia-400">let</span> VERSION = <span class="text-lime2-400">"1.0"</span></code></pre>
+        </div>
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700">
+            <span class="font-mono text-xs text-slate-500">main.bi</span>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-fuchsia-400">import</span> <span class="text-lime2-400">"./utils.bi"</span>
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/"</span> {
+  <span class="text-fuchsia-400">return</span> utils.<span class="text-sky-300">greet</span>(<span class="text-lime2-400">"world"</span>)
+}
+
+<span class="text-slate-500">// with an alias</span>
+<span class="text-fuchsia-400">import</span> <span class="text-lime2-400">"./utils.bi"</span> <span class="text-fuchsia-400">as</span> u
+u.<span class="text-sky-300">greet</span>(<span class="text-lime2-400">"world"</span>)</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PACKAGES ================= -->
+  <section id="packages" class="py-20 border-t border-ink-800 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">06 — packages</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">A pip-style package manager</h2>
+        <p class="mt-4 text-slate-400">Install packages with one command. Manifests live in <code class="font-mono text-slate-300">bi.json</code>, packages land in <code class="font-mono text-slate-300">bi_modules/</code>.</p>
+      </div>
+
+      <div class="mt-10 grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+          <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+            <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+              <h3 class="font-semibold text-white text-sm">Install &amp; use</h3>
+              <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+            </div>
+            <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code><span class="text-slate-500"># install a package</span>
+<span class="text-lime2-400">bi install</span> router
+
+<span class="text-slate-500"># point at your own registry</span>
+<span class="text-fuchsia-400">export</span> BI_REGISTRY=https://packages.example.com
+
+<span class="text-slate-500"># use it</span>
+<span class="text-fuchsia-400">import</span> <span class="text-lime2-400">"router"</span>
+
+<span class="text-fuchsia-400">route</span> <span class="text-accent-300">GET</span> <span class="text-lime2-400">"/"</span> {
+  <span class="text-fuchsia-400">return</span> router.name
+}</code></pre>
+          </div>
+
+          <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+            <div class="px-5 py-3 border-b border-ink-700">
+              <h3 class="font-semibold text-white text-sm">Package commands</h3>
+            </div>
+            <div class="p-5 grid sm:grid-cols-2 gap-3 text-[13px] font-mono">
+              <div class="flex gap-3"><span class="text-lime2-400">bi init</span><span class="text-slate-500">create bi.json</span></div>
+              <div class="flex gap-3"><span class="text-lime2-400">bi install</span><span class="text-slate-500">install all from bi.json</span></div>
+              <div class="flex gap-3"><span class="text-lime2-400">bi remove &lt;pkg&gt;</span><span class="text-slate-500">uninstall</span></div>
+              <div class="flex gap-3"><span class="text-lime2-400">bi list</span><span class="text-slate-500">list installed</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700">
+            <span class="font-mono text-xs text-slate-500">bi.json</span>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code>{
+  <span class="text-lime2-400">"name"</span>: <span class="text-lime2-400">"myapp"</span>,
+  <span class="text-lime2-400">"version"</span>: <span class="text-lime2-400">"0.1.0"</span>,
+  <span class="text-lime2-400">"entry"</span>: <span class="text-lime2-400">"src/main.bi"</span>,
+  <span class="text-lime2-400">"dependencies"</span>: {
+    <span class="text-lime2-400">"router"</span>: <span class="text-lime2-400">"*"</span>
+  }
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CLI ================= -->
+  <section id="cli" class="py-20 border-t border-ink-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">07 — cli reference</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Every command, at a glance</h2>
+      </div>
+
+      <div class="mt-10 rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-ink-700 text-left text-xs uppercase tracking-wider text-slate-500">
+              <th class="px-5 py-3 font-medium">Command</th>
+              <th class="px-5 py-3 font-medium">Description</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-ink-800 font-mono">
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi run &lt;file.bi&gt;</td><td class="px-5 py-3 text-slate-400 font-sans">Run without starting a server</td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi serve &lt;file.bi&gt;</td><td class="px-5 py-3 text-slate-400 font-sans">Run and start the HTTP server</td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">--port &lt;n&gt;</td><td class="px-5 py-3 text-slate-400 font-sans">Override the port passed to <code class="font-mono text-slate-500">serve()</code></td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi new &lt;name&gt;</td><td class="px-5 py-3 text-slate-400 font-sans">Scaffold a new project directory</td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi init</td><td class="px-5 py-3 text-slate-400 font-sans">Add <code class="font-mono text-slate-500">bi.json</code> + <code class="font-mono text-slate-500">src/main.bi</code> to current folder</td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi install [pkg]</td><td class="px-5 py-3 text-slate-400 font-sans">Install a package, or all from <code class="font-mono text-slate-500">bi.json</code></td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi remove &lt;pkg&gt;</td><td class="px-5 py-3 text-slate-400 font-sans">Uninstall</td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi list</td><td class="px-5 py-3 text-slate-400 font-sans">List installed packages</td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi version</td><td class="px-5 py-3 text-slate-400 font-sans">Print version</td></tr>
+            <tr class="hover:bg-ink-800/40 transition"><td class="px-5 py-3 text-accent-300 whitespace-nowrap">bi help</td><td class="px-5 py-3 text-slate-400 font-sans">Show help</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STDLIB ================= -->
+  <section id="stdlib" class="py-20 border-t border-ink-800 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">08 — standard library</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Batteries, lightly included</h2>
+      </div>
+
+      <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="rounded-xl border border-ink-700 bg-ink-950 p-5">
+          <h3 class="text-sm font-semibold text-white mb-3">Core</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">print</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">len</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">str</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">num</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">bool</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">type</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">assert</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">exit</span>
+          </div>
+        </div>
+        <div class="rounded-xl border border-ink-700 bg-ink-950 p-5">
+          <h3 class="text-sm font-semibold text-white mb-3">Collections</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">range</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">map</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">filter</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">reduce</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">keys</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">values</span>
+          </div>
+        </div>
+        <div class="rounded-xl border border-ink-700 bg-ink-950 p-5">
+          <h3 class="text-sm font-semibold text-white mb-3">Strings</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">split</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">join</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">trim</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">upper</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">lower</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">replace</span>
+          </div>
+        </div>
+        <div class="rounded-xl border border-ink-700 bg-ink-950 p-5">
+          <h3 class="text-sm font-semibold text-white mb-3">Time / random</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">time</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">random</span>
+          </div>
+        </div>
+        <div class="rounded-xl border border-ink-700 bg-ink-950 p-5">
+          <h3 class="text-sm font-semibold text-white mb-3">Files</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">readFile</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-ink-800 text-slate-300 border border-ink-600">writeFile</span>
+          </div>
+        </div>
+        <div class="rounded-xl border border-ink-700 bg-ink-950 p-5">
+          <h3 class="text-sm font-semibold text-white mb-3">Web</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-accent-500/10 text-accent-300 border border-accent-500/20">json</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-accent-500/10 text-accent-300 border border-accent-500/20">html</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-accent-500/10 text-accent-300 border border-accent-500/20">status</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-accent-500/10 text-accent-300 border border-accent-500/20">header</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-accent-500/10 text-accent-300 border border-accent-500/20">redirect</span>
+            <span class="text-[11px] font-mono px-2 py-1 rounded bg-accent-500/10 text-accent-300 border border-accent-500/20">serve</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PROJECT LAYOUT ================= -->
+  <section id="layout" class="py-20 border-t border-ink-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">09 — project layout</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Where everything lives</h2>
+      </div>
+
+      <div class="mt-10 grid lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700">
+            <span class="font-mono text-xs text-slate-500">app structure</span>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code>myapp/
+├── bi.json              <span class="text-slate-500">manifest</span>
+├── src/
+│   └── main.bi          <span class="text-slate-500">entry point</span>
+└── bi_modules/          <span class="text-slate-500">installed packages</span>
+    └── router/
+        ├── bi.json
+        └── src/main.bi</code></pre>
+        </div>
+
+        <div class="rounded-2xl border border-ink-700 bg-ink-900/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-ink-700">
+            <span class="font-mono text-xs text-slate-500">compiler source</span>
+          </div>
+          <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code>src/
+├── main.cpp            <span class="text-slate-500">CLI entry point</span>
+├── token.hpp           <span class="text-slate-500">token kinds</span>
+├── lexer.hpp           <span class="text-slate-500">source → tokens</span>
+├── ast.hpp             <span class="text-slate-500">AST node definitions</span>
+├── parser.hpp          <span class="text-slate-500">tokens → AST</span>
+├── value.hpp           <span class="text-slate-500">runtime values, JSON</span>
+├── builtins.hpp        <span class="text-slate-500">native functions &amp; methods</span>
+├── interpreter.hpp     <span class="text-slate-500">tree-walking evaluator</span>
+├── http.hpp            <span class="text-slate-500">HTTP/1.1 server</span>
+└── pkg.hpp             <span class="text-slate-500">package manager</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STATUS ================= -->
+  <section id="status" class="py-20 border-t border-ink-800 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <p class="text-accent-400 font-mono text-sm mb-3">10 — status</p>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Early prototype, honest about it</h2>
+        <p class="mt-4 text-slate-400">Version 0.1.0. Everything documented above works. Here's what doesn't, yet.</p>
+      </div>
+
+      <div class="mt-10 grid lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-lime2-400/20 bg-lime2-400/[0.03] p-6">
+          <h3 class="flex items-center gap-2 font-semibold text-white">
+            <span class="w-5 h-5 rounded-full bg-lime2-400/15 flex items-center justify-center text-lime2-400 text-xs">✓</span>
+            Works
+          </h3>
+          <p class="mt-3 text-sm text-slate-400">Everything documented above — the language, the HTTP server, routes, modules, and the package manager.</p>
+        </div>
+
+        <div class="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] p-6">
+          <h3 class="flex items-center gap-2 font-semibold text-white">
+            <span class="w-5 h-5 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-400 text-xs">!</span>
+            Limitations
+          </h3>
+          <ul class="mt-3 space-y-2 text-sm text-slate-400">
+            <li class="flex gap-2"><span class="text-slate-600">—</span>No template literals yet — use <code class="font-mono text-slate-300">"..." + var</code></li>
+            <li class="flex gap-2"><span class="text-slate-600">—</span>No HTTPS — put it behind nginx or Caddy</li>
+            <li class="flex gap-2"><span class="text-slate-600">—</span>No async I/O — thread-per-connection instead</li>
+            <li class="flex gap-2"><span class="text-slate-600">—</span>No GC — reference counting via <code class="font-mono text-slate-300">std::shared_ptr</code></li>
+            <li class="flex gap-2"><span class="text-slate-600">—</span>Tree-walking interpreter — fine for prototypes</li>
+            <li class="flex gap-2"><span class="text-slate-600">—</span>Linux x86_64 binary only — macOS &amp; ARM coming</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CONTRIBUTING ================= -->
+  <section id="contributing" class="py-20 border-t border-ink-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="rounded-3xl border border-ink-700 bg-gradient-to-br from-ink-900 to-ink-950 p-8 sm:p-12 relative overflow-hidden">
+        <div class="absolute inset-0 grid-bg opacity-40 [mask-image:radial-gradient(ellipse_50%_80%_at_80%_50%,#000,transparent)]"></div>
+        <div class="relative grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Contributing</h2>
+            <p class="mt-4 text-slate-400">
+              Issues and pull requests are welcome. If you report a bug, include the
+              <code class="font-mono text-slate-300">.bi</code> file that triggers it, the exact command you ran,
+              and the output you got.
+            </p>
+            <div class="mt-7 flex flex-wrap gap-3">
+              <a href="https://github.com/barshansarkar/bi" target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-ink-950 font-semibold hover:bg-slate-200 transition">
+                <svg viewBox="0 0 16 16" class="w-4 h-4 fill-current"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+                View on GitHub
+              </a>
+              <a href="#top" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-ink-600 text-slate-200 font-semibold hover:border-slate-500 hover:bg-ink-800 transition">
+                Back to top
+              </a>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+            <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+              <span class="font-mono text-xs text-slate-500">build from source</span>
+              <button data-copy class="text-xs font-mono text-slate-500 hover:text-slate-200 transition">copy</button>
+            </div>
+            <pre class="p-5 text-[13px] font-mono leading-relaxed overflow-x-auto"><code>git clone https://github.com/barshansarkar/bi
+cd bi
+make
+sudo make install
+
+<span class="text-slate-500"># or with cmake</span>
+cmake -B build
+cmake --build build -j
+sudo cmake --install build</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="border-t border-ink-800 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center font-mono font-bold text-ink-950 text-sm">.bi</span>
+          <div>
+            <p class="text-sm text-slate-300 font-medium">.bi language</p>
+            <p class="text-xs text-slate-500">A small web programming language</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500">
+          <a href="#install" class="hover:text-slate-300 transition">Install</a>
+          <a href="#language" class="hover:text-slate-300 transition">Language</a>
+          <a href="#web" class="hover:text-slate-300 transition">Web</a>
+          <a href="#cli" class="hover:text-slate-300 transition">CLI</a>
+          <a href="https://github.com/barshansarkar/bi" target="_blank" rel="noopener" class="hover:text-slate-300 transition">GitHub</a>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          MIT License · Built by
+          <a href="https://github.com/barshansarkar" target="_blank" rel="noopener" class="text-slate-300 hover:text-white transition font-medium">Barshan Sarkar</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= COPY SCRIPT ================= -->
+  <script>
+    document.querySelectorAll('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        // Find the nearest <pre><code> sibling
+        const container = btn.closest('.relative') || btn.closest('div');
+        const pre = container?.parentElement?.querySelector('pre code')
+                 || container?.querySelector('pre code')
+                 || btn.parentElement.querySelector('pre code');
+        if (!pre) return;
+
+        const text = pre.innerText;
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          // fallback
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+
+        const original = btn.textContent;
+        btn.textContent = 'copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+
+    // Smooth active-section highlight in nav
+    const sections = ['install','quickstart','language','web','packages','cli']
+      .map(id => document.getElementById(id))
+      .filter(Boolean);
+
+    const navLinks = {};
+    document.querySelectorAll('nav a[href^="#"]').forEach(a => {
+      const id = a.getAttribute('href').slice(1);
+      if (id) navLinks[id] = a;
+    });
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const link = navLinks[entry.target.id];
+        if (!link) return;
+        if (entry.isIntersecting) {
+          Object.values(navLinks).forEach(l => l.classList.remove('text-white'));
+          link.classList.add('text-white');
+        }
+      });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+
+    sections.forEach(s => observer.observe(s));
+  </script>
+
+</body>
+</html>
